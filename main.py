@@ -285,8 +285,8 @@ def manual_tree_creation() -> Optional[NaryTree]:
 
 def performance_test():
     """Тест производительности для деревьев разного размера"""
-    sizes = [100, 1000, 10000, 100000]
-    min_depth, max_depth = 2, 4
+    sizes = [100, 1000, 10000, 100000, 10007000]
+    min_depth, max_depth = 4, 7
     
     print("\nТест производительности:")
     print(f"Поиск поддеревьев с глубиной листьев [{min_depth}, {max_depth}]")

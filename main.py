@@ -3,7 +3,7 @@ from collections import deque
 import networkx as nx
 import matplotlib.pyplot as plt
 import time
-from typing import List, Optional, Set, Tuple
+from typing import List, Optional, Tuple
 
 class TreeNode:
     """Узел N-дерева"""
@@ -66,8 +66,6 @@ class NaryTree:
                     nodes_queue.append(None)
                 
                 current_index += 1
-        
-        self.save_to_file("random_tree.txt")
 
     def find_subtrees_with_leaf_depths(self, min_depth: int, max_depth: int) -> Tuple[List['NaryTree'], float]:
         """
@@ -88,18 +86,15 @@ class NaryTree:
         while queue:
             current_node = queue.popleft()
             
-            # Пропускаем листья (они не могут быть корнями поддеревьев)
             if not current_node.children:
                 continue
                 
-            # Проверяем все листья текущего поддерева
             if self._check_leaf_depths(current_node, min_depth, max_depth):
                 subtree = NaryTree()
                 subtree.root = self._copy_subtree(current_node)
                 subtree._size = self._count_nodes(subtree.root)
                 valid_subtrees.append(subtree)
             
-            # Добавляем детей для проверки их поддеревьев
             for child in current_node.children:
                 queue.append(child)
         
@@ -142,15 +137,7 @@ class NaryTree:
         return 1 + sum(self._count_nodes(child) for child in node.children)
 
     def visualize(self, title: str = "N-дерево", node_size: int = 800, level_spacing: float = 1.5, sibling_spacing: float = 1.2) -> None:
-        """
-        Визуализация дерева без наложения узлов.
-        
-        Параметры:
-            title: заголовок графа
-            node_size: размер узлов (по умолчанию 800)
-            level_spacing: вертикальное расстояние между уровнями (по умолчанию 1.5)
-            sibling_spacing: горизонтальное расстояние между узлами одного уровня (по умолчанию 1.2)
-        """
+        """Визуализация дерева с помощью networkx и matplotlib"""
         if self.root is None:
             print("Дерево пустое")
             return
@@ -160,22 +147,19 @@ class NaryTree:
         pos = {}
         labels = {}
 
-        # Рекурсивное вычисление позиций с учетом размера поддеревьев
         def _calculate_positions(node, x_offset: float, y: float, spacing: float):
             if node is None:
                 return x_offset
 
             node_id = id(node)
-            
-            # Вычисляем ширину поддерева (рекурсивно для всех детей)
             child_x = x_offset
             child_widths = []
+            
             for child in node.children:
                 child_width = _calculate_positions(child, child_x, y - level_spacing, spacing * 0.9)
                 child_widths.append(child_width - child_x)
                 child_x = child_width + sibling_spacing
 
-            # Центрируем родителя относительно детей
             total_width = sum(child_widths) + max(0, len(node.children) - 1) * sibling_spacing
             x = x_offset + total_width / 2
             
@@ -183,16 +167,13 @@ class NaryTree:
             labels[node_id] = str(node.data)
             G.add_node(node_id)
 
-            # Добавляем связи с детьми
             for child in node.children:
                 G.add_edge(node_id, id(child))
 
             return x_offset + total_width
 
-        # Вычисляем позиции всех узлов
         _calculate_positions(self.root, 0, 0, sibling_spacing)
 
-        # Автоматическая подгонка размера графа
         if not pos:
             return
 
@@ -201,15 +182,12 @@ class NaryTree:
         x_range = max(x_values) - min(x_values)
         y_range = max(y_values) - min(y_values)
 
-        # Настройка размеров фигуры
         fig_width = max(10, min(20, x_range * 0.5))
         fig_height = max(8, min(15, y_range * 0.7))
         plt.figure(figsize=(fig_width, fig_height))
 
-        # Определение цветов узлов
         node_colors = ['skyblue' if G.out_degree(node) > 0 else 'lightgreen' for node in G.nodes()]
 
-        # Отрисовка графа
         nx.draw(G, pos,
                 labels=labels,
                 node_size=node_size,
@@ -225,48 +203,51 @@ class NaryTree:
         plt.tight_layout()
         plt.show()
 
-    def save_to_file(self, filename: str) -> None:
-        """Сохранение дерева в файл (префиксный обход)"""
-        with open(filename, 'w', encoding='utf-8') as f:
-            def _write_node(node):
-                if node is None:
-                    f.write("None\n")
-                    return
-                f.write(f"{node.data} {len(node.children)}\n")
-                for child in node.children:
-                    _write_node(child)
-            _write_node(self.root)
-        print(f"Дерево сохранено в {filename}")
+def save_tree_to_file(tree: NaryTree, filename: str) -> None:
+    """Сохраняет дерево в файл в формате: значение количество_детей"""
+    with open(filename, 'w', encoding='utf-8') as f:
+        def _write_node(node, level=0):
+            if node is None:
+                f.write("  " * level + "None\n")
+                return
+            f.write("  " * level + f"{node.data} {len(node.children)}\n")
+            for child in node.children:
+                _write_node(child, level + 1)
+        
+        _write_node(tree.root)
+    print(f"Дерево сохранено в {filename}")
 
-    def load_from_file(self, filename: str) -> None:
-        """Загрузка дерева из файла"""
-        try:
-            with open(filename, 'r', encoding='utf-8') as f:
-                lines = f.read().splitlines()
-        except FileNotFoundError:
-            print(f"Файл {filename} не найден")
-            return
+def save_subtrees_to_file(subtrees: List[NaryTree], filename: str, exec_time: float) -> None:
+    """Сохраняет результаты поиска поддеревьев в файл"""
+    with open(filename, 'w', encoding='utf-8') as f:
+        if exec_time < 0.001:
+            time_str = f"{exec_time * 1000:.3f} наносекунд"
+        elif exec_time < 1:
+            time_str = f"{exec_time:.3f} микросекунд"
+        else:
+            time_str = f"{exec_time:.3f} миллисекунд"
+        
+        f.write(f"Результаты поиска поддеревьев\n")
+        f.write(f"Время выполнения: {time_str}\n")
+        f.write(f"Найдено поддеревьев: {len(subtrees)}\n\n")
+        
+        for i, subtree in enumerate(subtrees, 1):
+            f.write(f"Поддерево {i}:\n")
+            f.write(f"  Корень: {subtree.root.data}\n")
+            f.write(f"  Количество узлов: {subtree.get_size()}\n")
             
-        def _build_tree(it):
-            try:
-                line = next(it).strip()
-            except StopIteration:
-                return None
-                
-            if line == "None":
-                return None
-                
-            parts = line.split()
-            data = int(parts[0])
-            num_children = int(parts[1])
+            f.write("  Структура поддерева:\n")
+            stack = [(subtree.root, 0)]
             
-            node = TreeNode(data)
-            node.children = [_build_tree(it) for _ in range(num_children)]
-            return node
+            while stack:
+                node, level = stack.pop()
+                f.write("    " + "  " * level + f"{node.data}\n")
+                for child in reversed(node.children):
+                    stack.append((child, level + 1))
             
-        self.root = _build_tree(iter(lines))
-        self._size = self._count_nodes(self.root) if self.root else 0
-        print(f"Дерево загружено из {filename} ({self._size} узлов)")
+            f.write("\n")
+    
+    print(f"Результаты поиска сохранены в {filename}")
 
 def manual_tree_creation() -> Optional[NaryTree]:
     """Создание дерева вручную"""
@@ -304,8 +285,8 @@ def manual_tree_creation() -> Optional[NaryTree]:
 
 def performance_test():
     """Тест производительности для деревьев разного размера"""
-    sizes = [100, 1000, 10000, 100000, 1000000]
-    min_depth, max_depth = 5, 7
+    sizes = [100, 1000, 10000, 100000]
+    min_depth, max_depth = 2, 4
     
     print("\nТест производительности:")
     print(f"Поиск поддеревьев с глубиной листьев [{min_depth}, {max_depth}]")
@@ -322,6 +303,8 @@ def performance_test():
 def main():
     """Основная функция с интерфейсом командной строки"""
     current_tree = None
+    subtrees = []
+    exec_time = 0.0
     
     while True:
         print("\nМеню:")
@@ -330,7 +313,7 @@ def main():
         print("3. Создать дерево вручную")
         print("4. Визуализировать дерево")
         print("5. Найти поддеревья по глубине листьев")
-        print("6. Сохранить дерево в файл")
+        print("6. Сохранить данные")
         print("7. Тест производительности")
         print("8. Выход")
         
@@ -371,10 +354,9 @@ def main():
                 
                 subtrees, exec_time = current_tree.find_subtrees_with_leaf_depths(min_d, max_d)
                 
-                # Форматируем время для вывода
-                if exec_time < 0.001:  # меньше 1 микросекунды
+                if exec_time < 0.001:
                     time_str = f"{exec_time * 1000:.3f} наносекунд"
-                elif exec_time < 1:    # меньше 1 миллисекунды
+                elif exec_time < 1:
                     time_str = f"{exec_time:.3f} микросекунд"
                 else:
                     time_str = f"{exec_time:.3f} миллисекунд"
@@ -390,8 +372,21 @@ def main():
         
         elif choice == '6':
             if current_tree:
-                filename = input("Имя файла: ").strip()
-                current_tree.save_to_file(filename)
+                print("1. Сохранить основное дерево")
+                print("2. Сохранить результаты последнего поиска")
+                save_choice = input("Выберите что сохранить: ").strip()
+                
+                if save_choice == '1':
+                    filename = input("Введите имя файла для сохранения дерева: ").strip()
+                    save_tree_to_file(current_tree, filename)
+                elif save_choice == '2':
+                    if subtrees:
+                        filename = input("Введите имя файла для сохранения результатов: ").strip()
+                        save_subtrees_to_file(subtrees, filename, exec_time)
+                    else:
+                        print("Сначала выполните поиск поддеревьев!")
+                else:
+                    print("Неверный выбор!")
             else:
                 print("Дерево не загружено!")
         

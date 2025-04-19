@@ -69,20 +69,19 @@ class NaryTree:
         
         self.save_to_file("random_tree.txt")
 
-    def find_subtrees_with_leaf_depths(self, min_depth: int, max_depth: int) -> List['NaryTree']:
+    def find_subtrees_with_leaf_depths(self, min_depth: int, max_depth: int) -> Tuple[List['NaryTree'], float]:
         """
         Находит все поддеревья, где все листья находятся на глубине 
         (в рёбрах) от корня поддерева в диапазоне [min_depth, max_depth]
-        :param min_depth: минимальная глубина листьев (>= 0)
-        :param max_depth: максимальная глубина листьев (>= min_depth)
-        :return: список поддеревьев, удовлетворяющих условию
+        Возвращает кортеж: (список поддеревьев, время выполнения в миллисекундах)
         """
         if self.root is None:
-            return []
+            return [], 0.0
             
         if min_depth < 0 or max_depth < min_depth:
             raise ValueError("Некорректный диапазон глубин")
         
+        start_time = time.perf_counter()
         valid_subtrees = []
         queue = deque([self.root])
         
@@ -104,7 +103,9 @@ class NaryTree:
             for child in current_node.children:
                 queue.append(child)
         
-        return valid_subtrees
+        end_time = time.perf_counter()
+        elapsed_time = (end_time - start_time) * 1000  # в миллисекундах
+        return valid_subtrees, elapsed_time
 
     def _check_leaf_depths(self, node: TreeNode, min_d: int, max_d: int) -> bool:
         """
@@ -142,7 +143,7 @@ class NaryTree:
 
     def visualize(self, title: str = "N-дерево", node_size: int = 800, level_spacing: float = 1.5, sibling_spacing: float = 1.2) -> None:
         """
-        Усовершенствованная визуализация дерева без наложения узлов.
+        Визуализация дерева без наложения узлов.
         
         Параметры:
             title: заголовок графа
@@ -301,6 +302,23 @@ def manual_tree_creation() -> Optional[NaryTree]:
         return tree
     return None
 
+def performance_test():
+    """Тест производительности для деревьев разного размера"""
+    sizes = [100, 1000, 10000, 100000, 1000000]
+    min_depth, max_depth = 5, 7
+    
+    print("\nТест производительности:")
+    print(f"Поиск поддеревьев с глубиной листьев [{min_depth}, {max_depth}]")
+    print("Размер дерева | Время поиска (мс)")
+    print("--------------------------------")
+    
+    for size in sizes:
+        tree = NaryTree()
+        tree.create_random_tree(size)
+        
+        _, exec_time = tree.find_subtrees_with_leaf_depths(min_depth, max_depth)
+        print(f"{size:11} | {exec_time:.6f}")
+
 def main():
     """Основная функция с интерфейсом командной строки"""
     current_tree = None
@@ -313,7 +331,8 @@ def main():
         print("4. Визуализировать дерево")
         print("5. Найти поддеревья по глубине листьев")
         print("6. Сохранить дерево в файл")
-        print("7. Выход")
+        print("7. Тест производительности")
+        print("8. Выход")
         
         choice = input("Выберите действие: ").strip()
         
@@ -350,8 +369,17 @@ def main():
                 min_d = int(input("Минимальная глубина листьев: "))
                 max_d = int(input("Максимальная глубина листьев: "))
                 
-                subtrees = current_tree.find_subtrees_with_leaf_depths(min_d, max_d)
-                print(f"\nНайдено {len(subtrees)} поддеревьев:")
+                subtrees, exec_time = current_tree.find_subtrees_with_leaf_depths(min_d, max_d)
+                
+                # Форматируем время для вывода
+                if exec_time < 0.001:  # меньше 1 микросекунды
+                    time_str = f"{exec_time * 1000:.3f} наносекунд"
+                elif exec_time < 1:    # меньше 1 миллисекунды
+                    time_str = f"{exec_time:.3f} микросекунд"
+                else:
+                    time_str = f"{exec_time:.3f} миллисекунд"
+                
+                print(f"\nНайдено {len(subtrees)} поддеревьев за {time_str}:")
                 
                 for i, subtree in enumerate(subtrees, 1):
                     print(f"{i}. Корень: {subtree.root.data}, узлов: {subtree.get_size()}")
@@ -368,6 +396,9 @@ def main():
                 print("Дерево не загружено!")
         
         elif choice == '7':
+            performance_test()
+        
+        elif choice == '8':
             print("Выход")
             break
         

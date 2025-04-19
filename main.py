@@ -363,10 +363,17 @@ def main():
                 
                 print(f"\nНайдено {len(subtrees)} поддеревьев за {time_str}:")
                 
-                for i, subtree in enumerate(subtrees, 1):
-                    print(f"{i}. Корень: {subtree.root.data}, узлов: {subtree.get_size()}")
-                    if input("Показать? (y/n): ").lower() == 'y':
-                        subtree.visualize(f"Поддерево {i} (корень {subtree.root.data})")
+                if len(subtrees) > 20:
+                    answer = input(f"Найдено {len(subtrees)} поддеревьев. Показать первое? (y/n): ").lower()
+                    if answer == 'y':
+                        subtrees[0].visualize(f"Поддерево 1 (корень {subtrees[0].root.data})")
+                    else:
+                        print("Вывод поддеревьев пропущен.")
+                else:
+                    for i, subtree in enumerate(subtrees, 1):
+                        print(f"{i}. Корень: {subtree.root.data}, узлов: {subtree.get_size()}")
+                        if input("Показать? (y/n): ").lower() == 'y':
+                            subtree.visualize(f"Поддерево {i} (корень {subtree.root.data})")
             except ValueError as e:
                 print(f"Ошибка: {e}")
         

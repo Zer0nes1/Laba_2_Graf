@@ -66,7 +66,35 @@ class NaryTree:
                     nodes_queue.append(None)
                 
                 current_index += 1
+    def load_from_file(self, filename: str) -> None:
+        """Загружает дерево из файла в формате: значение количество_детей"""
+        with open(filename, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
 
+        def _parse_node(lines, index):
+            if index >= len(lines) or lines[index].strip().lower() == 'none':
+                return None, index + 1
+
+            line = lines[index].strip()
+            indent = len(line) - len(line.lstrip())
+            parts = line.split()
+            data = int(parts[0])
+            num_children = int(parts[1])
+
+            node = TreeNode(data)
+            index += 1
+
+            for _ in range(num_children):
+                child, index = _parse_node(lines, index)
+                if child is not None:
+                    node.children.append(child)
+
+            return node, index
+
+        self.root, _ = _parse_node(lines, 0)
+        self._size = self._count_nodes(self.root)
+        print(f"Дерево загружено. Узлов: {self._size}")
+        
     def find_subtrees_with_leaf_depths(self, min_depth: int, max_depth: int) -> Tuple[List['NaryTree'], float]:
         """
         Находит все поддеревья, где все листья находятся на глубине 
